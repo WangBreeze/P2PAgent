@@ -158,7 +158,7 @@ class P2PNode:
         self.running = False
         
         # 关闭所有 Peer 连接
-        for peer in self.peers.values():
+        for peer in list(self.peers.values()):
             if peer.ws:
                 try:
                     await peer.ws.close()
