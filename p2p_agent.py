@@ -325,15 +325,18 @@ class P2PNode:
         """处理收到的消息"""
         msg_type = data.get("type", "chat")
         
+        # 保存原始发送者名称
+        original_from = data.get("from", peer.name)
+        
         if msg_type == "chat":
             content = data.get("content", "")
-            print(f"\r💬 [{peer.name}]: {content}")
+            print(f"\r💬 [{original_from}]: {content}")
             self.show_prompt()
         
         elif msg_type == "file_notify":
             filename = data.get("filename", "")
             file_id = data.get("file_id", "")
-            print(f"\r📁 [{peer.name}] 分享了文件: {filename} (ID: {file_id})")
+            print(f"\r📁 [{original_from}] 分享了文件: {filename} (ID: {file_id})")
             self.show_prompt()
         
         elif msg_type == "system":
@@ -343,7 +346,8 @@ class P2PNode:
         
         # 转发给其他 Peer（避免重复转发）
         if data.get("origin") != self.name:
-            data["origin"] = data.get("from", peer.name)
+            data["origin"] = original_from
+            data["from"] = original_from  # 保留原始发送者
             await self.broadcast(data, exclude=peer.id)
     
     async def broadcast(self, message: dict, exclude: str = None):
@@ -351,7 +355,9 @@ class P2PNode:
         if not self.peers:
             return
         
-        message["from"] = self.name
+        # 只在没有设置 from 时才设置为当前节点
+        if "from" not in message:
+            message["from"] = self.name
         payload = json.dumps(message, ensure_ascii=False)
         
         disconnected = []
